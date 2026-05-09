@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Product ID">
+  <title>Product ID Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d1a; --card: #16213e; --border: #1e3a6a;
+      --accent: #5ba8d4; --green: #4cd9a0; --red: #ff6b6b;
+      --yellow: #ffd166; --text: #e8eaf0; --muted: #6a7fa0;
+      --input-bg: #0f2040;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+    html, body {
+      min-height: 100%; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      display: flex; flex-direction: column; align-items: center;
+      padding: calc(var(--safe-top) + 32px) 20px calc(var(--safe-bot) + 32px);
+      gap: 14px;
+    }
+    header { width: 100%; max-width: 440px; text-align: center; margin-bottom: 4px; }
+    .icon {
+      width: 68px; height: 68px;
+      background: linear-gradient(145deg, #1e4080, #0d1e3a);
+      border-radius: 16px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 32px; margin-bottom: 12px;
+      box-shadow: 0 6px 24px rgba(91,168,212,0.25);
+    }
+    h1 { font-size: 1.3rem; font-weight: 700; }
+    .tagline { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+    .card {
+      width: 100%; max-width: 440px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 18px; padding: 22px 20px;
+    }
+
+    /* Desktop: location picker row */
+    .loc-row {
+      display: none;
+      align-items: center; gap: 10px;
+      background: #0a1a30; border: 1.5px dashed #1e3a6a;
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 20px;
+      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    }
+    .loc-row:hover { border-color: var(--accent); background: #0a2040; }
+    .loc-row.set { border-style: solid; border-color: #2a6a4a; background: #071a10; cursor: default; }
+    .loc-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .loc-text { flex: 1; min-width: 0; }
+    .loc-name { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .loc-sub  { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+    .loc-change {
+      font-size: 0.68rem; color: var(--accent);
+      border: 1px solid #2a5a7a; border-radius: 5px;
+      padding: 3px 8px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    }
+
+    .lbl { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+    input[type="number"] {
+      width: 100%; padding: 16px 12px;
+      font-size: 2.6rem; font-family: 'Courier New', monospace;
+      font-weight: 700; letter-spacing: 0.28em; text-align: center;
+      background: var(--input-bg); border: 2px solid var(--border);
+      border-radius: 12px; color: var(--text); outline: none;
+      -webkit-appearance: none; -moz-appearance: textfield;
+      transition: border-color 0.2s; margin-bottom: 16px;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus { border-color: var(--accent); }
+
+    .preview {
+      background: #060e1c; border: 1px solid #1a2a40; border-radius: 9px;
+      padding: 11px 13px; font-family: 'Courier New', monospace;
+      font-size: 0.88rem; color: var(--green); letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .note { font-size: 0.66rem; color: var(--muted); }
+
+    .btn-save {
+      width: 100%; padding: 17px; margin-top: 18px;
+      font-size: 1.05rem; font-weight: 700;
+      background: var(--accent); color: #04101e;
+      border: none; border-radius: 13px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-save:active { opacity: 0.82; transform: scale(0.98); }
+
+    .status { font-size: 0.82rem; text-align: center; padding-top: 8px; min-height: 20px; color: var(--green); }
+    .status.err  { color: var(--red); }
+    .status.warn { color: var(--yellow); }
+
+    /* Fallback copyable content */
+    .fallback { display: none; margin-top: 14px; }
+    .fallback textarea {
+      width: 100%; padding: 10px 12px;
+      font-family: 'Courier New', monospace; font-size: 0.9rem;
+      background: #060e1c; color: var(--green);
+      border: 1px solid #1a2a40; border-radius: 8px;
+      resize: none; outline: none;
+    }
+    .fallback .note { margin-top: 6px; }
+    .btn-copy {
+      width: 100%; padding: 11px; margin-top: 8px;
+      font-size: 0.85rem; font-weight: 600;
+      background: #1a2a3a; color: var(--accent);
+      border: 1px solid #2a4a6a; border-radius: 9px; cursor: pointer;
+    }
+    .btn-copy:active { background: #2a3a4a; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="icon">🔧</div>
+    <h1>Product ID Generator</h1>
+    <p class="tagline">Creates <code>product_id.env</code> on your thumb drive</p>
+  </header>
+
+  <div class="card">
+
+    <!-- Desktop: location picker (shown only when File System Access API is available) -->
+    <div class="loc-row" id="locRow" onclick="pickLocation()">
+      <span class="loc-icon" id="locIcon">💾</span>
+      <div class="loc-text">
+        <div class="loc-name" id="locName">Set save location…</div>
+        <div class="loc-sub"  id="locSub">Click to choose where to write the file</div>
+      </div>
+    </div>
+
+    <div class="lbl">Product ID</div>
+    <input type="number" id="pid" min="0" max="9999"
+           placeholder="0000" inputmode="numeric" autocomplete="off">
+
+    <div class="preview" id="preview">PRODUCT_ID=____</div>
+    <p class="note">One line · Linux newline (LF) · no carriage return</p>
+
+    <!-- Button has NO disabled attribute — always tappable -->
+    <button class="btn-save" onclick="doSave()">💾 Save File</button>
+
+    <div class="status" id="status"></div>
+
+    <div class="fallback" id="fallback">
+      <textarea id="fileContent" rows="2" readonly></textarea>
+      <p class="note">Copy this, paste into any plain-text editor, save as <strong>product_id.env</strong></p>
+      <button class="btn-copy" onclick="copyContent()">📋 Copy to clipboard</button>
+    </div>
+  </div>
+
+<script>
+const HAS_FSA = !!window.showSaveFilePicker;
+
+// ── IndexedDB ──────────────────────────────────────────────────────────────
+let fileHandle = null;
+const [DBN,STO,KEY] = ['pid_v5','h','f'];
+const openDB = () => new Promise((res,rej) => {
+  const r = indexedDB.open(DBN,1);
+  r.onupgradeneeded = e => e.target.result.createObjectStore(STO);
+  r.onsuccess = e => res(e.target.result); r.onerror = rej;
+});
+const dbPut = async v => { const db = await openDB(); return new Promise((res,rej) => { const tx = db.transaction(STO,'readwrite'); tx.objectStore(STO).put(v,KEY); tx.oncomplete=res; tx.onerror=rej; }); };
+const dbGet = async () => { const db = await openDB(); return new Promise((res,rej) => { const tx = db.transaction(STO,'readonly'); const r = tx.objectStore(STO).get(KEY); r.onsuccess=e=>res(e.target.result||null); r.onerror=rej; }); };
+const dbClear = async () => { const db = await openDB(); return new Promise((res,rej) => { const tx = db.transaction(STO,'readwrite'); tx.objectStore(STO).delete(KEY); tx.oncomplete=res; tx.onerror=rej; }); };
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function pad(n) { return String(Math.max(0,Math.min(9999,Math.floor(n)))).padStart(4,'0'); }
+function setStatus(t,c='') { const el=document.getElementById('status'); el.textContent=t; el.className='status '+c; }
+function getVal() {
+  const raw = document.getElementById('pid').value.trim();
+  const val = parseInt(raw,10);
+  return (raw===''||isNaN(val)||val<0||val>9999) ? null : val;
+}
+
+// ── Input ──────────────────────────────────────────────────────────────────
+document.getElementById('pid').addEventListener('input', () => {
+  setStatus(''); document.getElementById('fallback').style.display='none';
+  const val = getVal();
+  document.getElementById('preview').textContent = val!==null ? 'PRODUCT_ID='+pad(val) : 'PRODUCT_ID=____';
+});
+
+// ── Desktop: location UI ───────────────────────────────────────────────────
+function setLocUI(name) {
+  const row = document.getElementById('locRow');
+  document.getElementById('locIcon').textContent = '✅';
+  document.getElementById('locName').textContent = name;
+  document.getElementById('locSub').textContent  = 'File will be written here';
+  row.classList.add('set'); row.onclick = null;
+  if (!document.getElementById('locChange')) {
+    const b = document.createElement('span');
+    b.id='locChange'; b.className='loc-change'; b.textContent='Change';
+    b.onclick = e => { e.stopPropagation(); pickLocation(); };
+    row.appendChild(b);
+  }
+}
+function resetLocUI() {
+  const row = document.getElementById('locRow');
+  row.classList.remove('set'); row.onclick = pickLocation;
+  document.getElementById('locIcon').textContent = '💾';
+  document.getElementById('locName').textContent = 'Set save location…';
+  document.getElementById('locSub').textContent  = 'Click to choose where to write the file';
+  const cb = document.getElementById('locChange'); if(cb) cb.remove();
+}
+async function pickLocation() {
+  try {
+    const h = await window.showSaveFilePicker({
+      suggestedName: 'product_id.env',
+      types: [{description:'ENV file', accept:{'text/plain':['.env']}}]
+    });
+    fileHandle=h; await dbPut(h); setLocUI(h.name); setStatus('');
+  } catch(e) { if(e.name!=='AbortError') setStatus('Could not set location: '+e.message,'err'); }
+}
+
+// ── Fallback copyable box ──────────────────────────────────────────────────
+function showFallback(content) {
+  document.getElementById('fileContent').value = content;
+  document.getElementById('fallback').style.display = 'block';
+}
+async function copyContent() {
+  const ta = document.getElementById('fileContent');
+  try { await navigator.clipboard.writeText(ta.value); setStatus('✓ Copied.'); }
+  catch { ta.select(); document.execCommand('copy'); setStatus('✓ Copied.'); }
+}
+
+// ── Write helpers ──────────────────────────────────────────────────────────
+async function writeViaFSA(content) {
+  const opts = {mode:'readwrite'};
+  if (await fileHandle.queryPermission(opts) !== 'granted')
+    if (await fileHandle.requestPermission(opts) !== 'granted')
+      throw Object.assign(new Error(), {name:'NotAllowedError'});
+
+  let existed = false;
+  try { await fileHandle.getFile(); existed=true; } catch {}
+
+  const w = await fileHandle.createWritable();
+  await w.write(content); await w.close();
+  setStatus((existed ? '✓ Overwritten: ' : '✓ Created: ') + fileHandle.name);
+}
+
+async function writeViaShare(content) {
+  const file = new File([content], 'product_id.env', {type:'text/plain'});
+  if (!navigator.canShare || !navigator.canShare({files:[file]}))
+    throw Object.assign(new Error('Share not available'), {name:'NotSupportedError'});
+  await navigator.share({files:[file], title:'product_id.env'});
+  setStatus('✓ Share sheet opened — pick your drive in Files.');
+}
+
+function writeViaDownload(content) {
+  const blob = new Blob([content], {type:'text/plain'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download='product_id.env';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 8000);
+  setStatus('✓ Downloaded — check your Downloads folder.');
+}
+
+// ── Main save ──────────────────────────────────────────────────────────────
+async function doSave() {
+  const val = getVal();
+  if (val===null) { setStatus('Enter a number between 0 and 9999.','err'); return; }
+
+  const content = 'PRODUCT_ID='+pad(val)+'\n';   // LF only, no \r
+  setStatus('Saving…','warn');
+
+  try {
+    if (HAS_FSA) {
+      // ── Desktop Chrome/Edge: write directly to file ──────────────────────
+      if (!fileHandle) await pickLocation();
+      if (!fileHandle) { setStatus('No save location chosen.','warn'); return; }
+      try {
+        await writeViaFSA(content);
+      } catch(e) {
+        if (e.name==='NotAllowedError') {
+          fileHandle=null; await dbClear(); resetLocUI();
+          setStatus('Permission lost — re-select the save location.','warn');
+        } else if (e.name==='NotFoundError') {
+          setStatus('File not found on drive — re-select location.','warn');
+          await pickLocation();
+          if (fileHandle) await writeViaFSA(content);
+        } else throw e;
+      }
+
+    } else {
+      // ── Mobile (iPhone Chrome/Safari via HTTPS): share sheet ─────────────
+      // Falls back to <a download> if share not available (file:// context etc.)
+      try {
+        await writeViaShare(content);
+      } catch(e) {
+        if (e.name==='AbortError') { setStatus('Cancelled.','warn'); return; }
+        // Share not available or failed — fall back to download
+        writeViaDownload(content);
+        // Show copyable fallback after short delay in case download also didn't fire
+        setTimeout(()=>{ if(document.getElementById('fallback').style.display!=='block') showFallback(content); }, 2500);
+      }
+    }
+  } catch(e) {
+    if (e.name==='AbortError') setStatus('Cancelled.','warn');
+    else { setStatus('Error: '+e.message,'err'); showFallback(content); }
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+(async () => {
+  if (HAS_FSA) {
+    document.getElementById('locRow').style.display = 'flex';
+    try { const s=await dbGet(); if(s){fileHandle=s; setLocUI(s.name);} } catch {}
+  }
+})();
+</script>
+</body>
+</html>
